@@ -1,0 +1,33 @@
+A content management system (CMS) is computer software used to manage the creation and modification of digital content (content management).[1][2][3] It is typically used for enterprise content management (ECM) and web content management (WCM). ECM typically supports multiple users in a collaborative environment,[4][5] by integrating document management, digital asset management, and record retention.[4] Alternatively, WCM is the collaborative authoring for websites and may include text and embed graphics, photos, video, audio, maps, and program code that display content and interact with the user.[6][7] ECM typically includes a WCM function.
+Structure
+
+A CMS typically has two major components: a content management application (CMA), as the front-end user interface that allows a user, even with limited expertise, to add, modify, and remove content from a website without the intervention of a webmaster; and a content delivery application (CDA), that compiles the content and updates the website.[8]
+Installation type
+
+There are two types of CMS installation: on-premises and cloud-based. On-premises installation means that the CMS software can be installed on the server. Notable CMSs which can be installed on-premises are Drupal, Grav, Joomla, ModX, Wordpress.org and others. The cloud-based CMS is hosted on the vendor environment. Examples of notable cloud-based CMSs are Adobe Experience Manager, Contentful, Ghost, Optimizely, SquareSpace, Webflow, WIX, Framer, Site.pro and Wordpress.com.[9]
+Common features
+
+The core CMS features are: indexing, search and retrieval, format management, revision control, and management.[4] Features may vary depending on the system application but will typically include:[4]
+
+    Intuitive indexing, search, and retrieval features index all data for easy access through search functions and allow users to search by attributes such as publication dates, keywords or author.
+    Format management facilitates turning scanned paper documents and legacy electronic documents into HTML or PDF documents.
+    Revision features allow content to be updated and edited after initial publication. Revision control also tracks any changes made to files by individuals.
+    Publishing functionality allows individuals to use a template or a set of templates approved by the organization, as well as wizards and other tools to create or modify content.
+
+Popular additional features may include:[4]
+
+    SEO-friendly URLs
+    Integrated and online help, including discussion boards
+    Group-based permission systems
+    Full template support and customizable templates
+    Easy wizard-based install and versioning procedures
+    Admin panel with multiple language support
+    Content hierarchy with unlimited depth and size
+    Minimal server requirements
+    Integrated file managers
+    Integrated audit logs
+    Support AMP page for Google
+    Support schema markup
+    Designed as per Google quality guidelines for website architecture
+    Availability of plug-ins for additional functionalities.
+    Security precautions such as 2 Factor Authentication
