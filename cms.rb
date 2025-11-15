@@ -5,6 +5,7 @@ require 'sinatra'
 require 'sinatra/reloader' if development?
 require 'securerandom'
 require 'redcarpet'
+require 'yaml'
 
 configure do
   enable :sessions
@@ -49,6 +50,17 @@ def render_markdown(file)
   markdown.render(File.read(file))
 end
 
+def load_user_credentials
+  # rubocop:disable Style/ExpandPathArguments
+  credentials_path = if ENV['RACK_ENV'] == 'test'
+                       File.expand_path('../test/users.yml', __FILE__)
+                     else
+                       File.expand_path('../users.yml', __FILE__)
+                     end
+  # rubocop:enable Style/ExpandPathArguments
+  YAML.load_file(credentials_path)
+end
+
 # View index of files in the CMS
 get '/' do
   pattern = File.join(data_path, '*')
@@ -62,12 +74,13 @@ get '/users/signin' do
   erb :signin
 end
 
-# User sign in attempt
+# Sign user in
 post '/users/signin' do
   username = params[:username].strip
   password = params[:password]
+  credentials = load_user_credentials
 
-  if username == 'admin' && password == 'secret'
+  if credentials.key?(username) && credentials[username] == password
     session[:username] = username
     session[:message] = 'Welcome!'
     redirect '/'

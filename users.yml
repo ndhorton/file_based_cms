@@ -1,0 +1,4 @@
+# users.yml
+---
+admin: secret
+nicholas: foobarbaz
