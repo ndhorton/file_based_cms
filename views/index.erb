@@ -9,6 +9,7 @@
     </li>
   <% end %>
 </ul>
+<p><a href="/new">New Document</a></p>
 <% if session[:username] %>
   <form action="/users/signout" method="post">
     <p class="user-status">
@@ -16,7 +17,6 @@
       <button type="submit">Sign Out</button>
     </p>
   </form>
-  <p><a href="/new">New Document</a></p>
 <% else %>
   <p class="user-status"><a href="/users/signin">Sign In</a></p>
 <% end %>

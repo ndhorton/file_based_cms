@@ -33,6 +33,17 @@ def load_file_content(file)
   end
 end
 
+def user_signed_in?
+  !!session[:username]
+end
+
+def require_signed_in_user
+  return if user_signed_in?
+
+  session[:message] = 'You must be signed in to do that.'
+  redirect '/'
+end
+
 def render_markdown(file)
   markdown = Redcarpet::Markdown.new(Redcarpet::Render::HTML)
   markdown.render(File.read(file))
@@ -46,10 +57,12 @@ get '/' do
   erb :index
 end
 
+# View sign in form
 get '/users/signin' do
   erb :signin
 end
 
+# User sign in attempt
 post '/users/signin' do
   username = params[:username].strip
   password = params[:password]
@@ -66,19 +79,23 @@ post '/users/signin' do
   end
 end
 
+# Sign user out
 post '/users/signout' do
   session.delete(:username)
   session[:message] = 'You have been signed out.'
   redirect '/'
 end
 
-# Name a new file
+# View the new document page
 get '/new' do
+  require_signed_in_user
   erb :new
 end
 
 # Save a new file
 post '/create' do
+  require_signed_in_user
+
   filename = params[:filename].strip
   if filename.empty?
     session[:message] = 'A name is required.'
@@ -105,6 +122,8 @@ end
 
 # Edit a file
 get '/:filename/edit' do
+  require_signed_in_user
+
   file_path = File.join(data_path, params[:filename])
 
   @filename = params[:filename]
@@ -115,6 +134,8 @@ end
 
 # Save changes to a file
 post '/:filename' do
+  require_signed_in_user
+
   file_path = File.join(data_path, params[:filename])
 
   File.write(file_path, params[:content])
@@ -124,6 +145,8 @@ post '/:filename' do
 end
 
 post '/:filename/delete' do
+  require_signed_in_user
+
   file_path = File.join(data_path, params[:filename])
   File.delete(file_path)
   session[:message] = "#{params[:filename]} has been deleted."
