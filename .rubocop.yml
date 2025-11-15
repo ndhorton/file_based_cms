@@ -1,3 +1,11 @@
 Style/ExpandPathArguments:
   Exclude:
     - '**/*.rb'
+
+Metrics/AbcSize:
+  Exclude:
+    - 'test/*.rb'
+
+Metrics/MethodLength:
+  Exclude:
+    - 'test/*.rb'

@@ -4,31 +4,128 @@ require 'tilt/erubi'
 require 'sinatra'
 require 'sinatra/reloader' if development?
 require 'securerandom'
+require 'redcarpet'
 
 configure do
   enable :sessions
   set :session_secret, SecureRandom.hex(64)
 end
 
-# rubocop:disable Style/ExpandPathArguments
-ROOT = File.expand_path('..', __FILE__).freeze
-# rubocop:enable Style/ExpandPathArguments
+def data_path
+  if ENV['RACK_ENV'] == 'test'
+    # rubocop:disable Style/ExpandPathArguments
+    File.expand_path('../test/data', __FILE__)
+    # rubocop:enable Style/ExpandPathArguments
+  else
+    # rubocop:disable Style/ExpandPathArguments
+    File.expand_path('../data', __FILE__)
+    # rubocop:enable Style/ExpandPathArguments
+  end
+end
 
-DATA_DIR = "#{ROOT}/data".freeze
+def load_file_content(file)
+  case File.extname(file)
+  when '.txt'
+    headers['Content-Type'] = 'text/plain'
+    File.read(file)
+  when '.md'
+    erb render_markdown(file)
+  end
+end
 
+def render_markdown(file)
+  markdown = Redcarpet::Markdown.new(Redcarpet::Render::HTML)
+  markdown.render(File.read(file))
+end
+
+# View index of files in the CMS
 get '/' do
-  @files = Dir.glob("#{DATA_DIR}/*").map { |path| File.basename(path) }
+  pattern = File.join(data_path, '*')
+  @files = Dir.glob(pattern).map { |path| File.basename(path) }
 
   erb :index
 end
 
-get '/:filename' do
-  file_path = "#{DATA_DIR}/#{params[:filename]}"
-  if File.file?(file_path)
-    headers['Content-Type'] = 'text/plain'
-    File.read(file_path)
+get '/users/signin' do
+  erb :signin
+end
+
+post '/users/signin' do
+  username = params[:username].strip
+  password = params[:password]
+
+  if username == 'admin' && password == 'secret'
+    session[:username] = username
+    session[:message] = 'Welcome!'
+    redirect '/'
   else
-    session[:error] = "#{params[:filename]} does not exist."
-    redirect '/', 303
+    session[:message] = 'Invalid credentials'
+    status 422
+    @username = username
+    erb :signin
   end
+end
+
+post '/users/signout' do
+  session.delete(:username)
+  session[:message] = 'You have been signed out.'
+  redirect '/'
+end
+
+# Name a new file
+get '/new' do
+  erb :new
+end
+
+# Save a new file
+post '/create' do
+  filename = params[:filename].strip
+  if filename.empty?
+    session[:message] = 'A name is required.'
+    status 422
+    erb :new
+  else
+    FileUtils.touch(File.join(data_path, filename))
+    session[:message] = "#{filename} was created."
+    redirect '/'
+  end
+end
+
+# View file
+get '/:filename' do
+  file_path = File.join(data_path, params[:filename])
+
+  if File.file?(file_path)
+    load_file_content(file_path)
+  else
+    session[:message] = "#{params[:filename]} does not exist."
+    redirect '/'
+  end
+end
+
+# Edit a file
+get '/:filename/edit' do
+  file_path = File.join(data_path, params[:filename])
+
+  @filename = params[:filename]
+  @content = File.read(file_path)
+
+  erb :edit
+end
+
+# Save changes to a file
+post '/:filename' do
+  file_path = File.join(data_path, params[:filename])
+
+  File.write(file_path, params[:content])
+
+  session[:message] = "#{params[:filename]} has been updated."
+  redirect '/'
+end
+
+post '/:filename/delete' do
+  file_path = File.join(data_path, params[:filename])
+  File.delete(file_path)
+  session[:message] = "#{params[:filename]} has been deleted."
+  redirect '/'
 end

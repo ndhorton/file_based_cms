@@ -24,6 +24,7 @@ GEM
     rackup (2.2.1)
       rack (>= 3)
     rake (13.3.1)
+    redcarpet (3.6.1)
     ruby2_keywords (0.0.5)
     sinatra (4.2.1)
       logger (>= 1.6.0)
@@ -51,6 +52,7 @@ DEPENDENCIES
   rack-test
   rackup
   rake
+  redcarpet
   sinatra
   sinatra-contrib
 
