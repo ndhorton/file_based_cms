@@ -7,6 +7,12 @@ require 'securerandom'
 require 'redcarpet'
 require 'yaml'
 
+#  TODO:
+#   * create route to get signup page
+#   * create route for post from signup form
+#     * use BCrypt on password before storing it
+#   * amend sign in post route to use BCrypt on submitted password credential
+
 configure do
   enable :sessions
   set :session_secret, SecureRandom.hex(64)
