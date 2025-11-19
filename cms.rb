@@ -5,13 +5,8 @@ require 'sinatra'
 require 'sinatra/reloader' if development?
 require 'securerandom'
 require 'redcarpet'
+require 'bcrypt'
 require 'yaml'
-
-#  TODO:
-#   * create route to get signup page
-#   * create route for post from signup form
-#     * use BCrypt on password before storing it
-#   * amend sign in post route to use BCrypt on submitted password credential
 
 configure do
   enable :sessions
@@ -40,8 +35,15 @@ def load_file_content(file)
   end
 end
 
-def user_signed_in?
-  !!session[:username]
+def load_user_credentials
+  # rubocop:disable Style/ExpandPathArguments
+  credentials_path = if ENV['RACK_ENV'] == 'test'
+                       File.expand_path('../test/users.yml', __FILE__)
+                     else
+                       File.expand_path('../users.yml', __FILE__)
+                     end
+  # rubocop:enable Style/ExpandPathArguments
+  YAML.load_file(credentials_path)
 end
 
 def require_signed_in_user
@@ -56,15 +58,15 @@ def render_markdown(file)
   markdown.render(File.read(file))
 end
 
-def load_user_credentials
-  # rubocop:disable Style/ExpandPathArguments
-  credentials_path = if ENV['RACK_ENV'] == 'test'
-                       File.expand_path('../test/users.yml', __FILE__)
-                     else
-                       File.expand_path('../users.yml', __FILE__)
-                     end
-  # rubocop:enable Style/ExpandPathArguments
-  YAML.load_file(credentials_path)
+def user_signed_in?
+  !!session[:username]
+end
+
+def valid_credentials?(username, password)
+  credentials = load_user_credentials
+
+  credentials.key?(username) &&
+    (BCrypt::Password.new(credentials[username]) == password)
 end
 
 # View index of files in the CMS
@@ -84,9 +86,8 @@ end
 post '/users/signin' do
   username = params[:username].strip
   password = params[:password]
-  credentials = load_user_credentials
 
-  if credentials.key?(username) && credentials[username] == password
+  if valid_credentials?(username, password)
     session[:username] = username
     session[:message] = 'Welcome!'
     redirect '/'

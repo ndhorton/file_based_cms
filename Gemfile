@@ -4,6 +4,7 @@ source 'https://rubygems.org'
 
 ruby '3.4.7'
 
+gem 'bcrypt'
 gem 'erubi'
 gem 'minitest'
 gem 'puma'
