@@ -25,13 +25,16 @@ def data_path
   end
 end
 
-def load_file_content(file)
-  case File.extname(file)
+def load_file_content(filename)
+  filename = File.basename(filename)
+  path = File.join(data_path, filename)
+  content = File.read(path)
+  case File.extname(path)
   when '.txt'
     headers['Content-Type'] = 'text/plain'
-    File.read(file)
+    content
   when '.md'
-    erb render_markdown(file)
+    erb render_markdown(content)
   end
 end
 
@@ -53,9 +56,9 @@ def require_signed_in_user
   redirect '/'
 end
 
-def render_markdown(file)
+def render_markdown(content)
   markdown = Redcarpet::Markdown.new(Redcarpet::Render::HTML)
-  markdown.render(File.read(file))
+  markdown.render(content)
 end
 
 def user_signed_in?
