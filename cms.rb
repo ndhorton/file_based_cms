@@ -8,6 +8,12 @@ require 'redcarpet'
 require 'bcrypt'
 require 'yaml'
 
+# TODO: Validate that document names contain an extension that the application supports.
+# * Maintain allow list of file exetensions permitted in the CMS
+# * Check new filename against the allow list
+# The only problem is you also have the load_file_content() case statement where new
+# extensions need to be accounted for. So you would have to update in two places.
+
 configure do
   enable :sessions
   set :session_secret, SecureRandom.hex(64)
@@ -72,6 +78,11 @@ def valid_credentials?(username, password)
     (BCrypt::Password.new(credentials[username]) == password)
 end
 
+def valid_extension?(filename)
+  extension = File.extname(filename)
+  ['.md', '.txt'].include? extension
+end
+
 # View index of files in the CMS
 get '/' do
   pattern = File.join(data_path, '*')
@@ -119,10 +130,15 @@ end
 post '/create' do
   require_signed_in_user
 
-  filename = params[:filename].strip
+  filename = File.basename(params[:filename].strip)
   if filename.empty?
     session[:message] = 'A name is required.'
     status 422
+    erb :new
+  elsif !valid_extension?(filename)
+    session[:message] = 'Not a valid filename extension.'
+    status 422
+    @filename = filename
     erb :new
   else
     FileUtils.touch(File.join(data_path, filename))

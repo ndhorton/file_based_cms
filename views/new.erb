@@ -1,7 +1,7 @@
 <form action="/create" method="post">
   <label for="filename">Add a new document:</label>
   <div>
-    <input type="text" id="filename" name="filename" spellcheck="false">
+    <input type="text" id="filename" name="filename" spellcheck="false" value="<%= @filename %>">
     <button type="submit">Create</button>
   </div>
 </form>
