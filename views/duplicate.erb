@@ -1,0 +1,8 @@
+<form action="/duplicate" method="post">
+  <input type="hidden" name="old_filename" value="<%= @old_filename %>">
+  <label for="filename">Please enter a name for the duplicate file:</label>
+  <div>
+    <input type="text" id="filename" name="filename" spellcheck="false" value="<%= @filename %>">
+    <button type="submit">Duplicate</button>
+  </div>
+</form>

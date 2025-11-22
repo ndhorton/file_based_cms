@@ -8,15 +8,27 @@ require 'redcarpet'
 require 'bcrypt'
 require 'yaml'
 
-# TODO: Validate that document names contain an extension that the application supports.
-# * Maintain allow list of file exetensions permitted in the CMS
-# * Check new filename against the allow list
-# The only problem is you also have the load_file_content() case statement where new
-# extensions need to be accounted for. So you would have to update in two places.
+# TODO: Add a duplicate button that creates a new document based on an old one.
+# The duplicate button should take you to a form asking for a name for the duplicate.
+# We need to validate that the chosen name is not that of any extant file.
+# While we are at it, we should use the same functionality for the create file route.
+# Implementation steps:
+# X Create means of checking for existing filenames.
+# X Modify create file route to make use of unique-filename validation.
+# X Add duplicate button to index view.
+# X Create similar form for the duplicate view as for create file view.
+# X Copy and modify create file route for duplicate route.
+# * Create tests for Duplicate
 
 configure do
   enable :sessions
   set :session_secret, SecureRandom.hex(64)
+end
+
+def data_files
+  pattern = File.join(data_path, '*')
+  all_data_files = Dir.glob(pattern).map { |path| File.basename(path) }
+  all_data_files.select { |filename| valid_extension?(filename) }
 end
 
 def data_path
@@ -29,6 +41,10 @@ def data_path
     File.expand_path('../data', __FILE__)
     # rubocop:enable Style/ExpandPathArguments
   end
+end
+
+def filename_exists?(filename)
+  data_files.include?(File.basename(filename))
 end
 
 def load_file_content(filename)
@@ -85,8 +101,7 @@ end
 
 # View index of files in the CMS
 get '/' do
-  pattern = File.join(data_path, '*')
-  @files = Dir.glob(pattern).map { |path| File.basename(path) }
+  @files = data_files
 
   erb :index
 end
@@ -135,6 +150,11 @@ post '/create' do
     session[:message] = 'A name is required.'
     status 422
     erb :new
+  elsif filename_exists?(filename)
+    session[:message] = 'A file with that name already exists.'
+    status 422
+    @filename = filename
+    erb :new
   elsif !valid_extension?(filename)
     session[:message] = 'Not a valid filename extension.'
     status 422
@@ -143,6 +163,40 @@ post '/create' do
   else
     FileUtils.touch(File.join(data_path, filename))
     session[:message] = "#{filename} was created."
+    redirect '/'
+  end
+end
+
+get '/:filename/duplicate' do
+  require_signed_in_user
+
+  @filename = File.basename(params[:filename])
+  @old_filename = File.basename(params[:filename])
+
+  erb :duplicate
+end
+
+post '/duplicate' do
+  require_signed_in_user
+
+  @filename = File.basename(params[:filename].strip)
+  @old_filename = File.basename(params[:old_filename].strip)
+  if @filename.empty?
+    session[:message] = 'A name is required.'
+    status 422
+    erb :duplicate
+  elsif filename_exists?(@filename)
+    session[:message] = 'A file with that name already exists.'
+    status 422
+    erb :duplicate
+  elsif !valid_extension?(@filename)
+    session[:message] = 'Not a valid filename extension.'
+    status 422
+    erb :duplicate
+  else
+    # copy old file to new named file
+    FileUtils.cp(File.join(data_path, @old_filename), File.join(data_path, @filename))
+    session[:message] = "#{@filename} was created."
     redirect '/'
   end
 end

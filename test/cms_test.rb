@@ -161,6 +161,29 @@ class CMSTest < Minitest::Test
     assert_equal 'You must be signed in to do that.', session[:message]
   end
 
+  def test_create_new_document_with_existing_filename
+    create_document('test.txt')
+
+    post '/create', { filename: 'test.txt' }, admin_session
+
+    assert_equal 422, last_response.status
+    assert_includes last_response.body, 'A file with that name already exists.'
+  end
+
+  def test_create_new_document_with_disallowed_extension
+    post '/create', { filename: 'test.test' }, admin_session
+
+    assert_equal 422, last_response.status
+    assert_includes last_response.body, 'Not a valid filename extension.'
+  end
+
+  def test_create_new_document_with_disallowed_extension_signed_out
+    post '/create', { filename: 'test.test' }
+
+    assert_equal 302, last_response.status
+    assert_equal 'You must be signed in to do that.', session[:message]
+  end
+
   def test_deleting_document
     create_document('test.txt')
 
@@ -218,5 +241,59 @@ class CMSTest < Minitest::Test
     get last_response['Location']
     assert_nil session[:username]
     assert_includes last_response.body, 'Sign In'
+  end
+
+  def test_viewing_duplicate_form
+    create_document('test.txt')
+
+    get '/test.txt/duplicate', {}, admin_session
+
+    assert_equal 200, last_response.status
+    assert_includes last_response.body, '<form action="/duplicate"'
+  end
+
+  def test_duplicating_file
+    create_document('test.txt')
+
+    post '/duplicate', { old_filename: 'test.txt', filename: 'test_dup.txt' }, admin_session
+
+    assert_equal 302, last_response.status
+    assert_equal 'test_dup.txt was created.', session[:message]
+  end
+
+  def test_duplicating_file_without_signin
+    create_document('test.txt')
+
+    post '/duplicate', { old_filename: 'test.txt', filename: 'test_dup.txt' }
+
+    assert_equal 302, last_response.status
+    assert_equal 'You must be signed in to do that.', session[:message]
+  end
+
+  def test_duplicating_file_with_no_new_filename
+    create_document('test.txt')
+
+    post '/duplicate', { old_filename: 'test.txt', filename: '     ' }, admin_session
+
+    assert_equal 422, last_response.status
+    assert_includes last_response.body, 'A name is required.'
+  end
+
+  def test_duplicating_file_with_same_filename
+    create_document('test.txt')
+
+    post '/duplicate', { old_filename: 'test.txt', filename: 'test.txt' }, admin_session
+
+    assert_equal 422, last_response.status
+    assert_includes last_response.body, 'A file with that name already exists.'
+  end
+
+  def test_duplicating_file_with_invalid_extension_for_new_filename
+    create_document('test.txt')
+
+    post '/duplicate', { old_filename: 'test.txt', filename: 'test.test' }, admin_session
+
+    assert_equal 422, last_response.status
+    assert_includes last_response.body, 'Not a valid filename extension.'
   end
 end
