@@ -8,17 +8,7 @@ require 'redcarpet'
 require 'bcrypt'
 require 'yaml'
 
-# TODO: Add a duplicate button that creates a new document based on an old one.
-# The duplicate button should take you to a form asking for a name for the duplicate.
-# We need to validate that the chosen name is not that of any extant file.
-# While we are at it, we should use the same functionality for the create file route.
-# Implementation steps:
-# X Create means of checking for existing filenames.
-# X Modify create file route to make use of unique-filename validation.
-# X Add duplicate button to index view.
-# X Create similar form for the duplicate view as for create file view.
-# X Copy and modify create file route for duplicate route.
-# * Create tests for Duplicate
+# TODO:
 
 configure do
   enable :sessions
@@ -83,6 +73,24 @@ def render_markdown(content)
   markdown.render(content)
 end
 
+def save_user_credentials(credentials)
+  # rubocop:disable Style/ExpandPathArguments
+  credentials_path = if ENV['RACK_ENV'] == 'test'
+                       File.expand_path('../test/users.yml', __FILE__)
+                     else
+                       File.expand_path('../users.yml', __FILE__)
+                     end
+  # rubocop:enable Style/ExpandPathArguments
+
+  File.write(credentials_path, YAML.dump(credentials))
+end
+
+def user_exists?(username)
+  credentials = load_user_credentials
+
+  credentials.key?(username)
+end
+
 def user_signed_in?
   !!session[:username]
 end
@@ -104,6 +112,38 @@ get '/' do
   @files = data_files
 
   erb :index
+end
+
+# View sign up form
+get '/users/signup' do
+  erb :signup
+end
+
+# Sign user up
+post '/users/signup' do
+  username = params[:username].strip
+  password = params[:password]
+
+  if username.empty?
+    session[:message] = 'Username cannot be blank.'
+    status 422
+    erb :signup
+  elsif password.empty?
+    session[:message] = 'Password cannot be blank.'
+    status 422
+    erb :signup
+  elsif user_exists?(username)
+    session[:message] = 'A user with that name already exists.'
+    status 422
+    @username = username
+    erb :signup
+  else
+    credentials = load_user_credentials
+    credentials[username] = BCrypt::Password.create(password).to_s
+    save_user_credentials(credentials)
+    session[:message] = 'Account created. Please sign in.'
+    redirect '/'
+  end
 end
 
 # View sign in form

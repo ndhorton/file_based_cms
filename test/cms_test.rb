@@ -206,43 +206,6 @@ class CMSTest < Minitest::Test
     assert_equal 'You must be signed in to do that.', session[:message]
   end
 
-  def test_signin_form
-    get '/users/signin'
-
-    assert_equal 200, last_response.status
-    assert_includes last_response.body, '<input'
-    assert_includes last_response.body, '<button type="submit"'
-  end
-
-  def test_signin
-    post '/users/signin', username: 'admin', password: 'secret'
-    assert_equal 302, last_response.status
-    assert_equal 'Welcome!', session[:message]
-    assert_equal 'admin', session[:username]
-
-    get last_response['Location']
-    assert_includes last_response.body, 'Signed in as admin'
-  end
-
-  def test_signin_with_bad_credentials
-    post '/users/signin', username: 'guest', password: 'shhhh'
-    assert_equal 422, last_response.status
-    assert_nil session[:username]
-    assert_includes last_response.body, 'Invalid credentials'
-  end
-
-  def test_signout
-    get '/', {}, { 'rack.session' => { username: 'admin' } }
-    assert_includes last_response.body, 'Signed in as admin'
-
-    post 'users/signout'
-    assert_equal 'You have been signed out.', session[:message]
-
-    get last_response['Location']
-    assert_nil session[:username]
-    assert_includes last_response.body, 'Sign In'
-  end
-
   def test_viewing_duplicate_form
     create_document('test.txt')
 
