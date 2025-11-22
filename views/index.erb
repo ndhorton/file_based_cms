@@ -10,7 +10,21 @@
     </li>
   <% end %>
 </ul>
+<% unless @images.empty? %>
+  <p>Uploaded images:</p>
+  <ul>
+    <% @images.each do |image| %>
+      <li>
+        <a href="/images/<%= image %>"><%= image %></a>
+        <form action="/images/<%= image %>/delete" method="post" class="inline">
+          <button type="submit">delete</button>
+        </form>
+      </li>
+    <% end %>
+  </ul>
+<% end %>
 <p><a href="/new">New Document</a></p>
+<p><a href="/images/upload">Upload Image</a></p>
 <% if session[:username] %>
   <form action="/users/signout" method="post">
     <p class="user-status">

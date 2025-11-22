@@ -8,7 +8,17 @@ require 'redcarpet'
 require 'bcrypt'
 require 'yaml'
 
-# TODO:
+# TODO: Add the ability to upload images to the CMS (which could be referenced from markup files)
+# Images should be stored in /public for convenience
+# X Add upload image link to index
+# X Create image upload form view
+# X Create route for image upload form (user must be signed in)
+# X Create route for image upload form submission
+# * Create tests for image upload
+#   * Create tests for image upload form view
+#   * Create tests for image upload form submission
+#   * Create tests for viewing an image
+#   * Create tests for deleting an image
 
 configure do
   enable :sessions
@@ -35,6 +45,21 @@ end
 
 def filename_exists?(filename)
   data_files.include?(File.basename(filename))
+end
+
+def image_path
+  # rubocop:disable Style/ExpandPathArguments
+  if ENV['RACK_ENV'] == 'test'
+    File.expand_path('../test/images', __FILE__)
+  else
+    File.expand_path('../public/images', __FILE__)
+  end
+  # rubocop:enable Style/ExpandPathArguments
+end
+
+def image_files
+  files = Dir.glob("#{image_path}/*").map { |file| File.basename(file) }
+  files.select { |file| valid_image?(file) }
 end
 
 def load_file_content(filename)
@@ -107,10 +132,14 @@ def valid_extension?(filename)
   ['.md', '.txt'].include? extension
 end
 
+def valid_image?(filename)
+  ['.jpg'].include?(File.extname(filename.downcase))
+end
+
 # View index of files in the CMS
 get '/' do
   @files = data_files
-
+  @images = image_files
   erb :index
 end
 
@@ -207,6 +236,7 @@ post '/create' do
   end
 end
 
+# View the form to duplicate a file
 get '/:filename/duplicate' do
   require_signed_in_user
 
@@ -216,6 +246,7 @@ get '/:filename/duplicate' do
   erb :duplicate
 end
 
+# Duplicate a file
 post '/duplicate' do
   require_signed_in_user
 
@@ -243,7 +274,9 @@ end
 
 # View file
 get '/:filename' do
-  file_path = File.join(data_path, params[:filename])
+  filename = File.basename(params[:filename])
+  redirect "/images/#{filename}" if valid_image?(filename) && File.file?(File.join(image_path, filename))
+  file_path = File.join(data_path, filename)
 
   if File.file?(file_path)
     load_file_content(file_path)
@@ -257,9 +290,8 @@ end
 get '/:filename/edit' do
   require_signed_in_user
 
-  file_path = File.join(data_path, params[:filename])
-
-  @filename = params[:filename]
+  @filename = File.basename(params[:filename])
+  file_path = File.join(data_path, @filename)
   @content = File.read(file_path)
 
   erb :edit
@@ -277,11 +309,60 @@ post '/:filename' do
   redirect '/'
 end
 
+# Delete a file
 post '/:filename/delete' do
   require_signed_in_user
 
   file_path = File.join(data_path, params[:filename])
   File.delete(file_path)
   session[:message] = "#{params[:filename]} has been deleted."
+  redirect '/'
+end
+
+# View upload form for images
+get '/images/upload' do
+  require_signed_in_user
+  erb :upload
+end
+
+# Save an uploaded image
+post '/images/upload' do
+  require_signed_in_user
+
+  image = params[:image]
+  FileUtils.cp(image['tempfile'].path, File.join(image_path, image['filename']))
+  session[:message] = "#{image['filename']} successfully uploaded."
+  redirect '/'
+end
+
+# View an image
+get '/images/:filename' do
+  filename = File.basename(params[:filename])
+  file_path = File.join(image_path, filename)
+  if !File.file?(file_path)
+    session[:message] = "#{filename} does not exist."
+    redirect '/'
+  elsif !valid_image?(filename)
+    session[:message] = "#{filename} is not a recognized image."
+    redirect '/'
+  end
+
+  image_type = File.extname(filename)[1..]
+  headers['Content-Type'] = "image/#{image_type}"
+  send_file file_path
+end
+
+# Delete an image
+post '/images/:filename/delete' do
+  require_signed_in_user
+
+  filename = File.basename(params[:filename])
+  file_path = File.join(image_path, filename)
+  if File.file?(file_path)
+    FileUtils.rm(file_path)
+    session[:message] = "#{filename} has been deleted."
+  else
+    session[:message] = "#{filename} does not exist."
+  end
   redirect '/'
 end
