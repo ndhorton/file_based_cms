@@ -1,0 +1,5 @@
+./Gemfile.lock
+data/*
+data/.git
+data/.git/*
+!data/.keep
