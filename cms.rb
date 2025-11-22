@@ -8,17 +8,7 @@ require 'redcarpet'
 require 'bcrypt'
 require 'yaml'
 
-# TODO: Add the ability to upload images to the CMS (which could be referenced from markup files)
-# Images should be stored in /public for convenience
-# X Add upload image link to index
-# X Create image upload form view
-# X Create route for image upload form (user must be signed in)
-# X Create route for image upload form submission
-# * Create tests for image upload
-#   * Create tests for image upload form view
-#   * Create tests for image upload form submission
-#   * Create tests for viewing an image
-#   * Create tests for deleting an image
+# TODO: Modify the CMS so that each version of a document is preserved as changes are made to it.
 
 configure do
   enable :sessions
