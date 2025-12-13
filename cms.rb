@@ -7,30 +7,59 @@ require 'securerandom'
 require 'redcarpet'
 require 'bcrypt'
 require 'yaml'
+require 'rugged'
 
 # TODO: Modify the CMS so that each version of a document is preserved as changes are made to it.
-# Remember that we are not tracking the `data` dir or its git repo so when
-# we deploy the project, we will need to initialize a git repo and copy
-# the starting files into it before making a first commit.
-# * we need to check if the repository in the `data` directory exists
-# * if not, we need to create a new repo there, copy starting files, and commit
-# This needs to happen before the first request.
 
-configure do
-  enable :sessions
-  set :session_secret, SecureRandom.hex(64)
-  # check for data dir
-  # if this doesn't exist, create it
-  # check for data repo
-  # if this doesn't exist, create it
-  # copy starting files from some primitive_data dir
-  # create first commit
+def data_repo_config
+  return if ENV['RACK_ENV'] == 'test'
+
+  init_data_repo unless File.directory?(File.join(data_path, '.git'))
+end
+
+def init_data_repo
+  Rugged::Repository.init_at(data_path)
+
+  source_path = File.join(internal_data_path, '.')
+  FileUtils.cp_r(source_path, data_path)
+
+  # make first commit
+  starting_data_file_paths = Dir[File.join(data_path, '**/*')]
+  commit(starting_data_file_paths)
+end
+
+def commit(file_paths)
+  repo = Rugged::Repository.new(data_path)
+  index = repo.index
+
+  # store each file in db and stage
+  file_paths.each do |file_path|
+    oid = repo.write(File.read(file_path), :blob)
+    index.add path: File.basename(file_path), oid: oid, mode: 0o0100644
+  end
+
+  author = { email: 'nicholashorton7@protonmail.com', time: Time.now, name: 'Nicholas Horton' }
+  curr_tree = index.write_tree(repo)
+  Rugged::Commit.create(repo, {
+                          author: author,
+                          message: 'This is a commit message.',
+                          committer: author,
+                          parents: repo.empty? ? [] : [repo.head.target].compact,
+                          tree: curr_tree,
+                          update_ref: 'HEAD'
+                        })
 end
 
 def data_files
   pattern = File.join(data_path, '*')
   all_data_files = Dir.glob(pattern).map { |path| File.basename(path) }
   all_data_files.select { |filename| valid_extension?(filename) }
+end
+
+def internal_data_path
+  # rubocop:disable Style/ExpandPathArguments
+  File.expand_path('../internal_data', __FILE__)
+  # rubocop:enable Style/ExpandPathArguments
 end
 
 def data_path
@@ -136,6 +165,12 @@ end
 
 def valid_image?(filename)
   ['.jpg'].include?(File.extname(filename.downcase))
+end
+
+configure do
+  enable :sessions
+  set :session_secret, SecureRandom.hex(64)
+  data_repo_config
 end
 
 # View index of files in the CMS

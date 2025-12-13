@@ -1,5 +1,4 @@
 Gemfile.lock
-data/*
+data
 data/.git
-data/.git/*
-!data/.keep
+!data/.gitkeep

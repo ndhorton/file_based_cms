@@ -1,11 +1,2 @@
-THIS IS A TEST
-THIS IS A TEST
-THIS IS A TEST
-THIS IS A TEST
-THIS IS A TEST
-THIS IS A TEST
-THIS IS A TEST
-THIS IS A TEST
-THIS IS A TEST
-THIS IS A TEST
-THIS IS A TEST
+The new version control system will provide the ability to track changes
+made to files in the CMS.
