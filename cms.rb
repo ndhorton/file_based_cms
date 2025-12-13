@@ -9,26 +9,6 @@ require 'bcrypt'
 require 'yaml'
 require 'rugged'
 
-# TODO: Modify the CMS so that each version of a document is preserved as changes are made to it.
-# * commit changes when a file is deleted.
-
-def data_repo_config
-  return if ENV['RACK_ENV'] == 'test'
-
-  init_data_repo unless File.directory?(File.join(data_path, '.git'))
-end
-
-def init_data_repo
-  Rugged::Repository.init_at(data_path)
-
-  source_path = File.join(internal_data_path, '.')
-  FileUtils.cp_r(source_path, data_path)
-
-  # make first commit
-  starting_data_file_paths = Dir[File.join(data_path, '**/*')]
-  commit(starting_data_file_paths, 'First commit.')
-end
-
 def commit(file_paths, commit_message = "This is a commit message.\n")
   repo = Rugged::Repository.new(data_path)
   index = repo.index
@@ -46,43 +26,10 @@ def commit(file_paths, commit_message = "This is a commit message.\n")
   make_commit(repo, curr_tree, author, commit_message)
 end
 
-def remove_files_commit(file_paths, commit_message = "This is a commit message.\n")
-  repo = Rugged::Repository.new(data_path)
-  index = repo.index
-
-  # remove files from staging area
-  file_paths.each do |file_path|
-    index.remove File.basename(file_path)
-  end
-  # persist the index on disk
-  index.write
-
-  author = { email: 'nicholashorton7@protonmail.com', time: Time.now, name: 'Nicholas Horton' }
-  curr_tree = index.write_tree(repo)
-  make_commit(repo, curr_tree, author, commit_message)
-end
-
-def make_commit(repo, curr_tree, author, commit_message)
-  Rugged::Commit.create(repo, {
-                          author: author,
-                          message: commit_message,
-                          committer: author,
-                          parents: repo.empty? ? [] : [repo.head.target].compact,
-                          tree: curr_tree,
-                          update_ref: 'HEAD'
-                        })
-end
-
 def data_files
   pattern = File.join(data_path, '*')
   all_data_files = Dir.glob(pattern).map { |path| File.basename(path) }
   all_data_files.select { |filename| valid_extension?(filename) }
-end
-
-def internal_data_path
-  # rubocop:disable Style/ExpandPathArguments
-  File.expand_path('../internal_data', __FILE__)
-  # rubocop:enable Style/ExpandPathArguments
 end
 
 def data_path
@@ -95,6 +42,12 @@ def data_path
     File.expand_path('../data', __FILE__)
     # rubocop:enable Style/ExpandPathArguments
   end
+end
+
+def data_repo_config
+  return if ENV['RACK_ENV'] == 'test'
+
+  init_data_repo unless File.directory?(File.join(data_path, '.git'))
 end
 
 def filename_exists?(filename)
@@ -114,6 +67,23 @@ end
 def image_files
   files = Dir.glob("#{image_path}/*").map { |file| File.basename(file) }
   files.select { |file| valid_image?(file) }
+end
+
+def init_data_repo
+  Rugged::Repository.init_at(data_path)
+
+  source_path = File.join(internal_data_path, '.')
+  FileUtils.cp_r(source_path, data_path)
+
+  # make first commit
+  starting_data_file_paths = Dir[File.join(data_path, '**/*')]
+  commit(starting_data_file_paths, 'First commit.')
+end
+
+def internal_data_path
+  # rubocop:disable Style/ExpandPathArguments
+  File.expand_path('../internal_data', __FILE__)
+  # rubocop:enable Style/ExpandPathArguments
 end
 
 def load_file_content(filename)
@@ -140,16 +110,43 @@ def load_user_credentials
   YAML.load_file(credentials_path)
 end
 
-def require_signed_in_user
-  return if user_signed_in?
+def make_commit(repo, curr_tree, author, commit_message)
+  Rugged::Commit.create(repo, {
+                          author: author,
+                          message: commit_message,
+                          committer: author,
+                          parents: repo.empty? ? [] : [repo.head.target].compact,
+                          tree: curr_tree,
+                          update_ref: 'HEAD'
+                        })
+end
 
-  session[:message] = 'You must be signed in to do that.'
-  redirect '/'
+def remove_files_commit(file_paths, commit_message = "This is a commit message.\n")
+  repo = Rugged::Repository.new(data_path)
+  index = repo.index
+
+  # remove files from staging area
+  file_paths.each do |file_path|
+    index.remove File.basename(file_path)
+  end
+  # persist the index on disk
+  index.write
+
+  author = { email: 'nicholashorton7@protonmail.com', time: Time.now, name: 'Nicholas Horton' }
+  curr_tree = index.write_tree(repo)
+  make_commit(repo, curr_tree, author, commit_message)
 end
 
 def render_markdown(content)
   markdown = Redcarpet::Markdown.new(Redcarpet::Render::HTML)
   markdown.render(content)
+end
+
+def require_signed_in_user
+  return if user_signed_in?
+
+  session[:message] = 'You must be signed in to do that.'
+  redirect '/'
 end
 
 def save_user_credentials(credentials)
