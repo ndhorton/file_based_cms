@@ -9,10 +9,22 @@ require 'bcrypt'
 require 'yaml'
 
 # TODO: Modify the CMS so that each version of a document is preserved as changes are made to it.
+# Remember that we are not tracking the `data` dir or its git repo so when
+# we deploy the project, we will need to initialize a git repo and copy
+# the starting files into it before making a first commit.
+# * we need to check if the repository in the `data` directory exists
+# * if not, we need to create a new repo there, copy starting files, and commit
+# This needs to happen before the first request.
 
 configure do
   enable :sessions
   set :session_secret, SecureRandom.hex(64)
+  # check for data dir
+  # if this doesn't exist, create it
+  # check for data repo
+  # if this doesn't exist, create it
+  # copy starting files from some primitive_data dir
+  # create first commit
 end
 
 def data_files
