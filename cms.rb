@@ -10,6 +10,7 @@ require 'yaml'
 require 'rugged'
 
 # TODO: Modify the CMS so that each version of a document is preserved as changes are made to it.
+# * commit changes when a file is deleted.
 
 def data_repo_config
   return if ENV['RACK_ENV'] == 'test'
@@ -25,24 +26,46 @@ def init_data_repo
 
   # make first commit
   starting_data_file_paths = Dir[File.join(data_path, '**/*')]
-  commit(starting_data_file_paths)
+  commit(starting_data_file_paths, 'First commit.')
 end
 
-def commit(file_paths)
+def commit(file_paths, commit_message = "This is a commit message.\n")
   repo = Rugged::Repository.new(data_path)
   index = repo.index
 
-  # store each file in db and stage
+  # store each file in db and stage it
   file_paths.each do |file_path|
     oid = repo.write(File.read(file_path), :blob)
     index.add path: File.basename(file_path), oid: oid, mode: 0o0100644
   end
+  # persist the index on disk
+  index.write
 
   author = { email: 'nicholashorton7@protonmail.com', time: Time.now, name: 'Nicholas Horton' }
   curr_tree = index.write_tree(repo)
+  make_commit(repo, curr_tree, author, commit_message)
+end
+
+def remove_files_commit(file_paths, commit_message = "This is a commit message.\n")
+  repo = Rugged::Repository.new(data_path)
+  index = repo.index
+
+  # remove files from staging area
+  file_paths.each do |file_path|
+    index.remove File.basename(file_path)
+  end
+  # persist the index on disk
+  index.write
+
+  author = { email: 'nicholashorton7@protonmail.com', time: Time.now, name: 'Nicholas Horton' }
+  curr_tree = index.write_tree(repo)
+  make_commit(repo, curr_tree, author, commit_message)
+end
+
+def make_commit(repo, curr_tree, author, commit_message)
   Rugged::Commit.create(repo, {
                           author: author,
-                          message: 'This is a commit message.',
+                          message: commit_message,
                           committer: author,
                           parents: repo.empty? ? [] : [repo.head.target].compact,
                           tree: curr_tree,
@@ -267,8 +290,10 @@ post '/create' do
     @filename = filename
     erb :new
   else
-    FileUtils.touch(File.join(data_path, filename))
+    file_path = File.join(data_path, filename)
+    FileUtils.touch(file_path)
     session[:message] = "#{filename} was created."
+    commit([file_path], "#{filename} was created.\n")
     redirect '/'
   end
 end
@@ -303,8 +328,11 @@ post '/duplicate' do
     erb :duplicate
   else
     # copy old file to new named file
-    FileUtils.cp(File.join(data_path, @old_filename), File.join(data_path, @filename))
+    old_path = File.join(data_path, @old_filename)
+    new_path = File.join(data_path, @filename)
+    FileUtils.cp(old_path, new_path)
     session[:message] = "#{@filename} was created."
+    commit([new_path], "#{@filename} was created.\n")
     redirect '/'
   end
 end
@@ -343,6 +371,7 @@ post '/:filename' do
   File.write(file_path, params[:content])
 
   session[:message] = "#{params[:filename]} has been updated."
+  commit([file_path], "#{params[:filename]} has been updated.\n")
   redirect '/'
 end
 
@@ -353,6 +382,7 @@ post '/:filename/delete' do
   file_path = File.join(data_path, params[:filename])
   File.delete(file_path)
   session[:message] = "#{params[:filename]} has been deleted."
+  remove_files_commit([file_path], "#{params[:filename]} has been deleted.\n")
   redirect '/'
 end
 
