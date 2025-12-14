@@ -17,6 +17,7 @@ class CMSTest < Minitest::Test
 
   def setup
     FileUtils.mkdir_p(data_path)
+    init_data_repo
   end
 
   def teardown
@@ -185,7 +186,7 @@ class CMSTest < Minitest::Test
   end
 
   def test_deleting_document
-    create_document('test.txt')
+    post '/create', { filename: 'test.txt' }, admin_session
 
     post '/test.txt/delete', {}, admin_session
 
