@@ -1,0 +1,24 @@
+<!--
+  We need to have this page offer
+  * signin
+  * signup
+  If we are signed in, we only see options to
+  * start a new game
+  * signout
+  We will eventually see the option to
+  * View league table, which should be visible whether or not we are signed in
+
+  Which should be visible
+-->
+<% if @username %>
+  <h2>Hi there, <%= @username %>! Welcome to Tic Tac Toe</h2>
+<% else %>
+  <h2>Hi, please log in or register to play</h2>
+<% end %>
+<% if @username %>
+  <a href="/game">New Game</a>
+  <a href="/signout">Sign Out</a>
+<% else %>
+  <a href="/signin">Sign In</a>
+  <a href=
+<% end %>
